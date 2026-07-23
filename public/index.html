@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>달려라 승서! ⛷️</title>
+<title>달려라 승서! 🏃‍♀️</title>
 <style>
   :root{
-    --sky1:#bcd6f2;
-    --sky2:#eef5fb;
-    --snow1:#ffffff;
-    --snow2:#dfe9f5;
+    --sky1:#5ec8f2;
+    --sky2:#bfeafd;
+    --grass1:#8fd45c;
+    --grass2:#5fae3a;
     --accent:#ff6f61;
     --accent2:#ffd166;
     --navy:#4a5c8a;
@@ -194,7 +194,7 @@
   <div id="toast"></div>
 
   <div id="startScreen" class="overlay">
-    <h1>⛷️ 달려라 승서! ⛷️</h1>
+    <h1>🌞 달려라 승서! 🌞</h1>
     <p>스페이스바 또는 화면을 눌러서 점프하고<br>장애물을 피해요!<br>가끔 멈춰서 영어·수학·국어 문제를 10초 안에 맞춰야 해요.<br>틀리면 하트가 줄고, 맞히면 거리가 늘어나요!</p>
     <div class="btnRow">
       <button class="bigbtn" id="startBtn">시작하기</button>
@@ -234,7 +234,24 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAIbP5ccW8QDxcoqtTMjn7Qy0eTQiWyRBo",
+  authDomain: "catch-game-9ed27.firebaseapp.com",
+  projectId: "catch-game-9ed27",
+  storageBucket: "catch-game-9ed27.firebasestorage.app",
+  messagingSenderId: "1070651290489",
+  appId: "1:1070651290489:web:fb160814b7b469fa86b5a8"
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const LB_COLLECTION_PATH = 'leaderboards/seungseo-runner/entries';
+
 (() => {
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
@@ -284,6 +301,11 @@
   window.addEventListener('resize', resize);
 
   const GROUND_Y = BASE_H - 90;
+
+  const faceImg = new Image();
+  let faceImgReady = false;
+  faceImg.onload = ()=>{ faceImgReady = true; };
+  faceImg.src = 'assets/face.png';
 
   function rand(min,max){ min=Math.ceil(min); max=Math.floor(max); return Math.floor(Math.random()*(max-min+1))+min; }
   function shuffle(arr){
@@ -394,29 +416,26 @@
     return { question, answer:String(answer), options };
   }
 
-  // ---- leaderboard (localStorage) ----
-  const LB_KEY = 'runnerLeaderboardV2';
-  function getLeaderboard(){
-    try{ return JSON.parse(localStorage.getItem(LB_KEY)) || []; }
-    catch(e){ return []; }
+  // ---- leaderboard (Firestore, shared across every device) ----
+  async function fetchLeaderboard(){
+    const q = query(collection(db, LB_COLLECTION_PATH), orderBy('score','desc'), limit(10));
+    const snap = await getDocs(q);
+    return snap.docs.map(d=>({ id:d.id, name:d.data().name, score:d.data().score }));
   }
-  function saveLeaderboard(list){ localStorage.setItem(LB_KEY, JSON.stringify(list)); }
-  function qualifiesForLeaderboard(score){
-    const list = getLeaderboard();
-    return list.length < 10 || score > list[list.length-1].score;
+  async function addToLeaderboard(name, score){
+    const docRef = await addDoc(collection(db, LB_COLLECTION_PATH), {
+      name: (name||'승서').slice(0,10),
+      score,
+      ts: serverTimestamp()
+    });
+    return docRef.id;
   }
-  function addToLeaderboard(name, score){
-    const list = getLeaderboard();
-    const entry = { name: (name||'승서').slice(0,10), score, ts: Date.now() };
-    list.push(entry);
-    list.sort((a,b)=> b.score - a.score);
-    const trimmed = list.slice(0,10);
-    saveLeaderboard(trimmed);
-    return { list: trimmed, entry };
-  }
-  function renderLeaderboard(container, highlightEntry){
-    const list = getLeaderboard();
+  function renderLeaderboardList(container, list, highlightId){
     container.innerHTML = '';
+    if(!list){
+      container.innerHTML = '<p style="opacity:.85">리더보드를 불러오지 못했어요. 인터넷 연결을 확인해주세요.</p>';
+      return;
+    }
     if(list.length === 0){
       container.innerHTML = '<p style="opacity:.85">아직 기록이 없어요. 첫 기록의 주인공이 되어보세요!</p>';
       return;
@@ -425,18 +444,31 @@
     table.className = 'lbTable';
     list.forEach((e,i)=>{
       const row = document.createElement('div');
-      const isMe = highlightEntry && e.ts === highlightEntry.ts && e.score === highlightEntry.score;
-      row.className = 'lbRow' + (isMe ? ' lbRowMe' : '');
+      row.className = 'lbRow' + (e.id === highlightId ? ' lbRowMe' : '');
       row.innerHTML = `<span class="lbRank">${i+1}</span><span class="lbName">${escapeHtml(e.name)}</span><span class="lbScore">${e.score}m</span>`;
       table.appendChild(row);
     });
     container.appendChild(table);
+    if(highlightId && !list.some(e=>e.id===highlightId)){
+      const note = document.createElement('p');
+      note.style.opacity = '.85';
+      note.style.marginTop = '8px';
+      note.textContent = '아쉽지만 이번 기록은 10위 안에 들지 못했어요. 다음에 다시 도전해보세요!';
+      container.appendChild(note);
+    }
   }
 
-  leaderboardBtn.addEventListener('click', ()=>{
-    renderLeaderboard(lbStartList, null);
+  leaderboardBtn.addEventListener('click', async ()=>{
     startScreen.classList.add('hidden');
     leaderboardOverlay.classList.remove('hidden');
+    lbStartList.innerHTML = '<p style="opacity:.85">불러오는 중...</p>';
+    try{
+      const list = await fetchLeaderboard();
+      renderLeaderboardList(lbStartList, list, null);
+    }catch(e){
+      console.error(e);
+      renderLeaderboardList(lbStartList, null, null);
+    }
   });
   closeLeaderboardBtn.addEventListener('click', ()=>{
     leaderboardOverlay.classList.add('hidden');
@@ -653,33 +685,49 @@
     }
     finalScoreEl.textContent = finalDist;
     bestScoreEl.textContent = best;
+    gameOverScreen.classList.remove('hidden');
 
-    if(qualifiesForLeaderboard(finalDist) && finalDist > 0){
+    if(finalDist > 0){
       nameEntryRow.classList.remove('hidden');
-      lbGameOverList.innerHTML = '';
       nameInput.value = '';
-      const doSave = ()=>{
-        const { list, entry } = addToLeaderboard(nameInput.value.trim(), finalDist);
-        nameEntryRow.classList.add('hidden');
-        renderLeaderboard(lbGameOverList, entry);
-        saveScoreBtn.onclick = null;
+      lbGameOverList.innerHTML = '<p style="opacity:.85">불러오는 중...</p>';
+      let saving = false;
+      const doSave = async ()=>{
+        if(saving) return;
+        saving = true;
+        saveScoreBtn.disabled = true;
+        try{
+          const id = await addToLeaderboard(nameInput.value.trim(), finalDist);
+          nameEntryRow.classList.add('hidden');
+          const list = await fetchLeaderboard();
+          renderLeaderboardList(lbGameOverList, list, id);
+        }catch(e){
+          console.error(e);
+          showToast('저장에 실패했어요. 다시 시도해주세요.', 1500);
+          saving = false;
+          saveScoreBtn.disabled = false;
+        }
       };
       saveScoreBtn.onclick = doSave;
       nameInput.onkeydown = (e)=>{ if(e.key === 'Enter') doSave(); };
+      fetchLeaderboard().then(list=>{
+        if(!nameEntryRow.classList.contains('hidden')) renderLeaderboardList(lbGameOverList, list, null);
+      }).catch(()=>{
+        if(!nameEntryRow.classList.contains('hidden')) renderLeaderboardList(lbGameOverList, null, null);
+      });
     } else {
       nameEntryRow.classList.add('hidden');
-      renderLeaderboard(lbGameOverList, null);
+      fetchLeaderboard().then(list=>renderLeaderboardList(lbGameOverList, list, null))
+        .catch(()=>renderLeaderboardList(lbGameOverList, null, null));
     }
-
-    gameOverScreen.classList.remove('hidden');
   }
 
   // ---- obstacles ----
   const OBSTACLE_TYPES = [
-    { type:'rock',    w:72, h:62 },
-    { type:'tree',    w:64, h:104 },
-    { type:'snowman', w:56, h:94 },
-    { type:'gate',    w:46, h:112 },
+    { type:'rock', w:72, h:60 },
+    { type:'tree', w:70, h:104 },
+    { type:'bush', w:64, h:66 },
+    { type:'gate', w:46, h:112 },
   ];
   function spawnObstacle(){
     const t = OBSTACLE_TYPES[Math.floor(Math.random()*OBSTACLE_TYPES.length)];
@@ -714,47 +762,41 @@
   const HILL_PERIOD = 260;
 
   function drawBackground(){
-    // soft sun glow
-    const sunG = ctx.createRadialGradient(760,80,10,760,80,160);
-    sunG.addColorStop(0,'rgba(255,247,214,0.9)');
-    sunG.addColorStop(1,'rgba(255,247,214,0)');
+    // warm sun glow + disk
+    const sunG = ctx.createRadialGradient(760,80,10,760,80,170);
+    sunG.addColorStop(0,'rgba(255,250,210,0.95)');
+    sunG.addColorStop(1,'rgba(255,250,210,0)');
     ctx.fillStyle = sunG;
-    ctx.fillRect(560,-80,400,320);
+    ctx.fillRect(540,-90,420,340);
+    ctx.fillStyle = '#fff3b0';
+    ctx.beginPath();
+    ctx.arc(760,80,32,0,Math.PI*2);
+    ctx.fill();
 
-    // far mountains (parallax)
-    ctx.fillStyle = '#c3cdea';
+    // far rolling hills (parallax)
+    ctx.fillStyle = '#bfe08a';
     for(let i=-1;i<=Math.ceil(BASE_W/MOUNTAIN_PERIOD)+1;i++){
       const baseX = i*MOUNTAIN_PERIOD - (bg1 % MOUNTAIN_PERIOD);
       ctx.beginPath();
-      ctx.moveTo(baseX, GROUND_Y-40);
-      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.28, GROUND_Y-170);
-      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.55, GROUND_Y-40);
+      ctx.moveTo(baseX-30, GROUND_Y+10);
+      ctx.quadraticCurveTo(baseX+MOUNTAIN_PERIOD*0.5, GROUND_Y-130, baseX+MOUNTAIN_PERIOD+30, GROUND_Y+10);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = '#eef2fb';
-      ctx.beginPath();
-      ctx.moveTo(baseX+MOUNTAIN_PERIOD*0.28, GROUND_Y-170);
-      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.20, GROUND_Y-118);
-      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.28+16, GROUND_Y-122);
-      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.36, GROUND_Y-118);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#c3cdea';
     }
 
-    // mid hills (parallax, faster)
-    ctx.fillStyle = '#e7edf9';
+    // mid hills (parallax, faster, brighter green)
+    ctx.fillStyle = '#9ed968';
     for(let i=-1;i<=Math.ceil(BASE_W/HILL_PERIOD)+1;i++){
       const baseX = i*HILL_PERIOD - (bg2 % HILL_PERIOD);
       ctx.beginPath();
       ctx.moveTo(baseX-20, GROUND_Y+6);
-      ctx.quadraticCurveTo(baseX+HILL_PERIOD*0.5, GROUND_Y-78, baseX+HILL_PERIOD+20, GROUND_Y+6);
+      ctx.quadraticCurveTo(baseX+HILL_PERIOD*0.5, GROUND_Y-70, baseX+HILL_PERIOD+20, GROUND_Y+6);
       ctx.closePath();
       ctx.fill();
     }
 
     // clouds
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
     const clouds = [[130,66,28],[230,50,20],[640,58,24],[760,92,18]];
     clouds.forEach(([cx,cy,r])=>{
       const x = ((cx - bg1*0.4) % (BASE_W+200) + (BASE_W+200)) % (BASE_W+200) - 100;
@@ -765,29 +807,48 @@
   }
 
   function drawGround(){
-    // snowy path
-    const g = ctx.createLinearGradient(0,GROUND_Y,0,BASE_H);
-    g.addColorStop(0,'#ffffff');
-    g.addColorStop(1,'#dfe9f5');
+    // grass band
+    const g = ctx.createLinearGradient(0,GROUND_Y,0,GROUND_Y+18);
+    g.addColorStop(0,'#8fd45c');
+    g.addColorStop(1,'#6cba3f');
     ctx.fillStyle = g;
-    ctx.fillRect(0, GROUND_Y, BASE_W, BASE_H-GROUND_Y);
+    ctx.fillRect(0, GROUND_Y, BASE_W, 18);
+    ctx.fillStyle = '#5fae3a';
+    ctx.fillRect(0, GROUND_Y, BASE_W, 4);
 
-    ctx.fillStyle = '#c9d7ec';
-    ctx.fillRect(0, GROUND_Y, BASE_W, 6);
+    // dirt running trail
+    const dirtG = ctx.createLinearGradient(0,GROUND_Y+18,0,BASE_H);
+    dirtG.addColorStop(0,'#e0bd82');
+    dirtG.addColorStop(1,'#c9a463');
+    ctx.fillStyle = dirtG;
+    ctx.fillRect(0, GROUND_Y+18, BASE_W, BASE_H-GROUND_Y-18);
 
-    // ski track dashes
-    ctx.strokeStyle = 'rgba(140,165,205,0.55)';
+    // trail center dashes
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.lineWidth = 4;
     ctx.setLineDash([28,22]);
     ctx.beginPath();
-    ctx.moveTo(-groundScroll % 50, GROUND_Y+34);
-    ctx.lineTo(BASE_W, GROUND_Y+34);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-(groundScroll+18) % 50, GROUND_Y+62);
-    ctx.lineTo(BASE_W, GROUND_Y+62);
+    ctx.moveTo(-groundScroll % 50, GROUND_Y+48);
+    ctx.lineTo(BASE_W, GROUND_Y+48);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // little flowers dotted along the grass edge
+    const flowerColors = ['#ff6f9c','#ffd166','#ffffff'];
+    for(let i=0;i<16;i++){
+      const raw = i*58 - groundScroll*0.6;
+      const x = ((raw % (BASE_W+58)) + (BASE_W+58)) % (BASE_W+58) - 29;
+      const fy = GROUND_Y + 8 + (i%3)*3;
+      ctx.fillStyle = flowerColors[i%flowerColors.length];
+      for(let k=0;k<5;k++){
+        const ang = (Math.PI*2/5)*k;
+        ctx.beginPath();
+        ctx.arc(x+Math.cos(ang)*3, fy+Math.sin(ang)*3, 2, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath(); ctx.arc(x, fy, 1.4, 0, Math.PI*2); ctx.fill();
+    }
   }
 
   // ---- player drawing (cute girl skier character) ----
@@ -872,36 +933,25 @@
     ctx.arc(0, headCY, headR*1.04, 0, Math.PI*2);
     ctx.fill();
 
-    // face
-    ctx.fillStyle = '#ffe0bd';
+    // face (real photo, clipped to a circle)
+    const faceCY = headCY+headR*0.08, faceR = headR*0.93;
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(0, headCY+headR*0.08, headR*0.93, 0, Math.PI*2);
-    ctx.fill();
+    ctx.arc(0, faceCY, faceR, 0, Math.PI*2);
+    ctx.clip();
+    if(faceImgReady){
+      const d = faceR*2.05;
+      ctx.drawImage(faceImg, -d/2, faceCY-d/2, d, d);
+    } else {
+      ctx.fillStyle = '#ffe0bd';
+      ctx.fillRect(-faceR, faceCY-faceR, faceR*2, faceR*2);
+    }
+    ctx.restore();
 
     // rosy cheeks
-    ctx.fillStyle = 'rgba(255,140,140,0.55)';
-    ctx.beginPath(); ctx.ellipse(-headR*0.5, headCY+headR*0.35, headR*0.18, headR*0.11, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(headR*0.5, headCY+headR*0.35, headR*0.18, headR*0.11, 0, 0, Math.PI*2); ctx.fill();
-
-    // eyes
-    ctx.fillStyle = '#2b2320';
-    [-1,1].forEach(side=>{
-      ctx.beginPath();
-      ctx.ellipse(side*headR*0.38, headCY+headR*0.05, headR*0.12, headR*0.15, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(side*headR*0.38+headR*0.04, headCY+headR*0.0, headR*0.045, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#2b2320';
-    });
-
-    // smile
-    ctx.strokeStyle = '#b5654f';
-    ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    ctx.arc(0, headCY+headR*0.42, headR*0.28, 0.15*Math.PI, 0.85*Math.PI);
-    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,140,140,0.32)';
+    ctx.beginPath(); ctx.ellipse(-headR*0.5, headCY+headR*0.35, headR*0.16, headR*0.10, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(headR*0.5, headCY+headR*0.35, headR*0.16, headR*0.10, 0, 0, Math.PI*2); ctx.fill();
 
     // helmet (clip to upper dome area)
     ctx.save();
@@ -1000,8 +1050,8 @@
 
     if(o.type === 'rock'){
       const g = ctx.createLinearGradient(x,yTop,x,yTop+h);
-      g.addColorStop(0,'#aab6cc');
-      g.addColorStop(1,'#707d99');
+      g.addColorStop(0,'#b3ac9c');
+      g.addColorStop(1,'#7d7666');
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.moveTo(x+w*0.05, yTop+h);
@@ -1013,90 +1063,85 @@
       ctx.lineTo(x+w*0.95, yTop+h);
       ctx.closePath();
       ctx.fill();
-      // snow cap
-      ctx.fillStyle = '#f5f9ff';
-      ctx.beginPath();
-      ctx.moveTo(x+w*0.18, yTop+h*0.28);
-      ctx.quadraticCurveTo(x+w*0.55, yTop-h*0.06, x+w*0.82, yTop+h*0.26);
-      ctx.quadraticCurveTo(x+w*0.55, yTop+h*0.14, x+w*0.18, yTop+h*0.28);
-      ctx.fill();
+      // grass tufts at the base
+      ctx.strokeStyle = '#5fae3a';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for(let k=0;k<4;k++){
+        const gx = x + w*(0.08+k*0.24);
+        ctx.beginPath();
+        ctx.moveTo(gx, yTop+h);
+        ctx.quadraticCurveTo(gx-4, yTop+h-13, gx-2, yTop+h-17);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(gx+5, yTop+h);
+        ctx.quadraticCurveTo(gx+7, yTop+h-11, gx+9, yTop+h-15);
+        ctx.stroke();
+      }
     }
     else if(o.type === 'tree'){
-      const trunkW = w*0.18;
-      ctx.fillStyle = '#6b4a30';
-      ctx.fillRect(x+w/2-trunkW/2, yTop+h*0.82, trunkW, h*0.18);
-      const layers = [
-        {yb:h*0.90, w:w*1.0,  yt:h*0.55},
-        {yb:h*0.62, w:w*0.82, yt:h*0.28},
-        {yb:h*0.36, w:w*0.60, yt:h*0.02},
+      const trunkW = w*0.16;
+      ctx.fillStyle = '#8a6d3b';
+      ctx.fillRect(x+w/2-trunkW/2, yTop+h*0.55, trunkW, h*0.45);
+      const canopyCY = yTop+h*0.36;
+      const blobs = [
+        [0, 0, w*0.5],
+        [-w*0.3, h*0.08, w*0.36],
+        [w*0.3, h*0.08, w*0.36],
+        [0, -h*0.16, w*0.4],
       ];
-      layers.forEach((L,i)=>{
-        const g = ctx.createLinearGradient(x,yTop+L.yt,x,yTop+L.yb);
-        g.addColorStop(0,'#3f7a52');
-        g.addColorStop(1,'#255336');
+      blobs.forEach(([dx,dy,r])=>{
+        const g = ctx.createRadialGradient(x+w/2+dx-r*0.3, canopyCY+dy-r*0.3, r*0.2, x+w/2+dx, canopyCY+dy, r);
+        g.addColorStop(0,'#75c95a');
+        g.addColorStop(1,'#3f8f3a');
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.moveTo(x+w/2, yTop+L.yt);
-        ctx.lineTo(x+w/2-L.w/2, yTop+L.yb);
-        ctx.lineTo(x+w/2+L.w/2, yTop+L.yb);
-        ctx.closePath();
+        ctx.arc(x+w/2+dx, canopyCY+dy, r, 0, Math.PI*2);
         ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        for(let k=0;k<3;k++){
-          const fx = x+w/2 - L.w/2 + (L.w/3)*k + (L.w/6);
-          ctx.beginPath();
-          ctx.ellipse(fx, yTop+L.yb-2, L.w*0.11, 4, 0, 0, Math.PI*2);
-          ctx.fill();
-        }
       });
-    }
-    else if(o.type === 'snowman'){
-      const cx = x+w/2;
-      const bottomR = w*0.46, topR = w*0.32;
-      const bottomCY = yTop+h-bottomR*0.95;
-      const topCY = yTop+topR*1.05;
-      const sg = ctx.createLinearGradient(x,yTop,x,yTop+h);
-      sg.addColorStop(0,'#ffffff');
-      sg.addColorStop(1,'#dbe6f2');
-      ctx.fillStyle = sg;
-      ctx.beginPath(); ctx.arc(cx,bottomCY,bottomR,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx,topCY,topR,0,Math.PI*2); ctx.fill();
-      // hat
-      ctx.fillStyle = '#232323';
-      ctx.fillRect(cx-topR*0.7, topCY-topR*1.35, topR*1.4, topR*0.3);
-      ctx.fillRect(cx-topR*0.45, topCY-topR*1.9, topR*0.9, topR*0.6);
-      // buttons
-      ctx.fillStyle = '#3a3a3a';
-      for(let k=-1;k<=1;k++){
-        ctx.beginPath(); ctx.arc(cx, bottomCY-bottomR*0.35+k*bottomR*0.32, 3, 0, Math.PI*2); ctx.fill();
+      // little fruit dots
+      ctx.fillStyle = '#e6483c';
+      for(let k=0;k<3;k++){
+        const fx = x+w/2 + (k-1)*w*0.24;
+        const fy = canopyCY + h*0.12 + (k%2)*6;
+        ctx.beginPath(); ctx.arc(fx, fy, 3.4, 0, Math.PI*2); ctx.fill();
       }
-      // eyes
-      ctx.beginPath(); ctx.arc(cx-topR*0.32, topCY-topR*0.1, 2.6, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx+topR*0.32, topCY-topR*0.1, 2.6, 0, Math.PI*2); ctx.fill();
-      // nose
-      ctx.fillStyle = '#e88a2e';
-      ctx.beginPath();
-      ctx.moveTo(cx, topCY+topR*0.05);
-      ctx.lineTo(cx+topR*0.55, topCY+topR*0.2);
-      ctx.lineTo(cx, topCY+topR*0.28);
-      ctx.closePath();
-      ctx.fill();
-      // arms
-      ctx.strokeStyle = '#6b4a30';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(cx-bottomR*0.85, bottomCY); ctx.lineTo(cx-bottomR*1.5, bottomCY-14); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx+bottomR*0.85, bottomCY); ctx.lineTo(cx+bottomR*1.5, bottomCY-14); ctx.stroke();
+    }
+    else if(o.type === 'bush'){
+      const cx = x+w/2, baseCY = yTop+h*0.78;
+      const blobs = [
+        [0, 0, w*0.5],
+        [-w*0.32, h*0.02, w*0.34],
+        [w*0.32, h*0.02, w*0.34],
+        [0, -h*0.24, w*0.36],
+      ];
+      blobs.forEach(([dx,dy,r])=>{
+        const g = ctx.createRadialGradient(cx+dx-r*0.3, baseCY+dy-r*0.3, r*0.2, cx+dx, baseCY+dy, r);
+        g.addColorStop(0,'#82d35c');
+        g.addColorStop(1,'#4a9a3a');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx+dx, baseCY+dy, r, 0, Math.PI*2);
+        ctx.fill();
+      });
+      // little flowers
+      const dotColor = o.variant ? '#ff6f9c' : '#ffd166';
+      for(let k=0;k<5;k++){
+        const ang = (Math.PI*2/5)*k + (o.variant?0.3:0);
+        const fx = cx + Math.cos(ang)*w*0.32;
+        const fy = baseCY - h*0.12 + Math.sin(ang)*h*0.2;
+        ctx.fillStyle = dotColor;
+        ctx.beginPath(); ctx.arc(fx, fy, 3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(fx, fy, 1.1, 0, Math.PI*2); ctx.fill();
+      }
     }
     else if(o.type === 'gate'){
       const flutter = Math.sin(groundScroll*0.06 + x*0.02)*4;
-      const poleColor = o.variant ? '#e6483c' : '#3468c9';
-      ctx.fillStyle = '#dfe6ee';
+      const flagColor = o.variant ? '#e6483c' : '#3468c9';
+      ctx.fillStyle = '#8a6d3b';
       ctx.fillRect(x+w*0.42, yTop, w*0.16, h);
-      ctx.fillStyle = poleColor;
-      for(let seg=0; seg<h; seg+=18){
-        ctx.fillRect(x+w*0.42, yTop+seg, w*0.16, 9);
-      }
-      ctx.fillStyle = poleColor;
+      ctx.fillStyle = flagColor;
       ctx.beginPath();
       ctx.moveTo(x+w*0.58, yTop+h*0.08);
       ctx.lineTo(x+w*1.05+flutter, yTop+h*0.16);
