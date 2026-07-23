@@ -724,10 +724,10 @@ const LB_COLLECTION_PATH = 'leaderboards/seungseo-runner/entries';
 
   // ---- obstacles ----
   const OBSTACLE_TYPES = [
-    { type:'rock', w:72, h:60 },
-    { type:'tree', w:70, h:104 },
-    { type:'bush', w:64, h:66 },
-    { type:'gate', w:46, h:112 },
+    { type:'rock', w:58, h:48 },
+    { type:'tree', w:56, h:82 },
+    { type:'bush', w:52, h:52 },
+    { type:'gate', w:38, h:88 },
   ];
   function spawnObstacle(){
     const t = OBSTACLE_TYPES[Math.floor(Math.random()*OBSTACLE_TYPES.length)];
@@ -953,49 +953,6 @@ const LB_COLLECTION_PATH = 'leaderboards/seungseo-runner/entries';
     ctx.beginPath(); ctx.ellipse(-headR*0.5, headCY+headR*0.35, headR*0.16, headR*0.10, 0, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(headR*0.5, headCY+headR*0.35, headR*0.16, headR*0.10, 0, 0, Math.PI*2); ctx.fill();
 
-    // helmet (clip to upper dome area)
-    ctx.save();
-    roundRectPath(-headR*1.15, headCY-headR*1.2, headR*2.3, headR*1.55, {tl:headR,tr:headR,br:0,bl:0});
-    ctx.clip();
-    const helmG = ctx.createLinearGradient(-headR,headCY-headR,headR,headCY+headR*0.3);
-    helmG.addColorStop(0,'#ff8a7a');
-    helmG.addColorStop(0.5,'#e6483c');
-    helmG.addColorStop(1,'#b52f26');
-    ctx.fillStyle = helmG;
-    ctx.beginPath();
-    ctx.arc(0, headCY, headR*1.12, 0, Math.PI*2);
-    ctx.fill();
-    // shine
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.ellipse(-headR*0.4, headCY-headR*0.5, headR*0.22, headR*0.12, -0.4, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-    // helmet brim
-    ctx.strokeStyle = '#8f221b';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(-headR*1.02, headCY-headR*0.12);
-    ctx.lineTo(headR*1.02, headCY-headR*0.12);
-    ctx.stroke();
-    // vents
-    ctx.fillStyle = '#8f221b';
-    for(let i=-1;i<=1;i++){
-      ctx.fillRect(i*headR*0.32-headR*0.06, headCY-headR*0.06, headR*0.12, headR*0.05);
-    }
-
-    // chin strap
-    ctx.strokeStyle = '#232020';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(-headR*0.85, headCY-headR*0.1);
-    ctx.quadraticCurveTo(-headR*0.95, headCY+headR*0.75, -headR*0.25, headCY+headR*0.95);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(headR*0.85, headCY-headR*0.1);
-    ctx.quadraticCurveTo(headR*0.95, headCY+headR*0.75, headR*0.25, headCY+headR*0.95);
-    ctx.stroke();
-
     ctx.restore();
   }
 
@@ -1201,7 +1158,7 @@ const LB_COLLECTION_PATH = 'leaderboards/seungseo-runner/entries';
 
       scoreVal.textContent = Math.floor(distance);
 
-      if(distance >= nextQuizAt && state === 'running'){
+      if(distance >= nextQuizAt && state === 'running' && player.onGround){
         triggerQuiz();
       }
     }
