@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "target": "seungseo-runner",
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false
+  }
+}

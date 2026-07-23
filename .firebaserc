@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "catch-game-9ed27"
+  },
+  "targets": {
+    "catch-game-9ed27": {
+      "hosting": {
+        "seungseo-runner": [
+          "seungseo-runner"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
