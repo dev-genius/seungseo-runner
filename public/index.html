@@ -3,15 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>달려라 승서! 🏃</title>
+<title>달려라 승서! ⛷️</title>
 <style>
   :root{
-    --sky1:#8ed1fc;
-    --sky2:#c9f0ff;
-    --ground1:#8bc34a;
-    --ground2:#6fa83a;
+    --sky1:#bcd6f2;
+    --sky2:#eef5fb;
+    --snow1:#ffffff;
+    --snow2:#dfe9f5;
     --accent:#ff6f61;
     --accent2:#ffd166;
+    --navy:#4a5c8a;
+    --navy-dark:#33406b;
     --panel:#ffffff;
     --text:#33302a;
   }
@@ -44,23 +46,24 @@
   canvas{
     display:block;
     width:100%; height:100%;
-    background:linear-gradient(180deg,var(--sky1) 0%, var(--sky2) 70%);
+    background:linear-gradient(180deg,var(--sky1) 0%, var(--sky2) 75%);
   }
   .overlay{
     position:absolute; inset:0;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:16px;
+    gap:14px;
     background:rgba(20,20,30,0.55);
     color:#fff; text-align:center;
     padding:20px;
+    overflow-y:auto;
   }
   .hidden{ display:none !important; }
-  h1{ font-size:clamp(22px,5vw,38px); margin:0; text-shadow:2px 2px 0 rgba(0,0,0,0.2); }
-  p{ font-size:clamp(14px,2.6vw,18px); margin:0; line-height:1.5; }
+  h1{ font-size:clamp(22px,5vw,36px); margin:0; text-shadow:2px 2px 0 rgba(0,0,0,0.2); }
+  p{ font-size:clamp(13px,2.4vw,17px); margin:0; line-height:1.5; }
   .bigbtn{
-    font-size:clamp(16px,3vw,22px);
+    font-size:clamp(15px,3vw,21px);
     font-weight:800;
-    padding:14px 32px;
+    padding:13px 30px;
     border:none;
     border-radius:999px;
     background:var(--accent);
@@ -70,28 +73,50 @@
     transition:transform .05s;
   }
   .bigbtn:active{ transform:translateY(4px); box-shadow:0 2px 0 #c9463a; }
+  .bigbtn.alt{ background:var(--navy); box-shadow:0 6px 0 var(--navy-dark); }
+  .bigbtn.alt:active{ box-shadow:0 2px 0 var(--navy-dark); }
+  .btnRow{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
   #hud{
     position:absolute; top:10px; left:10px; right:10px;
     display:flex; justify-content:space-between; align-items:center;
     font-weight:800; font-size:clamp(14px,3vw,20px);
     color:#3a3a3a;
     pointer-events:none;
-    text-shadow:1px 1px 0 rgba(255,255,255,0.6);
+    text-shadow:1px 1px 0 rgba(255,255,255,0.7);
   }
   #hearts span{ margin-left:4px; }
   #quizOverlay{
     background:rgba(255,255,255,0.97);
     color:var(--text);
   }
+  #quizCategory{
+    font-size:clamp(12px,2.4vw,15px);
+    font-weight:800;
+    color:#fff;
+    background:var(--navy);
+    padding:4px 16px;
+    border-radius:999px;
+  }
   #quizQuestion{
-    font-size:clamp(24px,6vw,42px);
+    font-size:clamp(20px,5vw,36px);
     font-weight:900;
     background:var(--accent2);
-    padding:10px 26px;
+    padding:10px 22px;
     border-radius:16px;
     box-shadow:0 4px 0 rgba(0,0,0,0.1);
+    max-width:92%;
   }
-  #quizSub{ font-size:clamp(13px,2.5vw,16px); color:#666; }
+  #quizSub{ font-size:clamp(12px,2.3vw,15px); color:#666; }
+  #quizTimerRow{ display:flex; align-items:center; gap:10px; width:min(90%,480px); }
+  #quizTimerWrap{
+    flex:1; height:10px; background:#e9e9e9; border-radius:999px; overflow:hidden;
+  }
+  #quizTimerBar{
+    height:100%; width:100%;
+    background:linear-gradient(90deg,#6fcf97,#f2c94c,#eb5757);
+    transition:width .1s linear;
+  }
+  #quizTimerNum{ font-weight:900; font-size:15px; color:#555; min-width:20px; }
   #quizChoices{
     display:grid;
     grid-template-columns:1fr 1fr;
@@ -99,9 +124,9 @@
     width:min(90%,480px);
   }
   .choiceBtn{
-    font-size:clamp(15px,3vw,20px);
+    font-size:clamp(14px,2.8vw,19px);
     font-weight:800;
-    padding:16px 10px;
+    padding:14px 8px;
     border-radius:14px;
     border:3px solid #ddd;
     background:#fff;
@@ -113,14 +138,15 @@
   .choiceBtn.correct{ background:#b7f7c0; border-color:#3fbf5c; }
   .choiceBtn.wrong{ background:#ffc2c2; border-color:#e04b4b; }
   #toast{
-    position:absolute; top:18%; left:50%; transform:translateX(-50%);
-    font-size:clamp(20px,5vw,30px); font-weight:900;
+    position:absolute; top:16%; left:50%; transform:translateX(-50%);
+    font-size:clamp(18px,4.5vw,28px); font-weight:900;
     padding:10px 24px; border-radius:14px;
     background:rgba(0,0,0,0.75); color:#fff;
     pointer-events:none; opacity:0; transition:opacity .2s;
+    white-space:nowrap; z-index:5;
   }
   #toast.show{ opacity:1; }
-  #keyhint{ font-size:12px; opacity:0.85; }
+  #keyhint{ font-size:11px; opacity:0.85; }
   #rotateHint{
     position:fixed; top:10px; left:50%; transform:translateX(-50%);
     background:rgba(0,0,0,0.7); color:#fff;
@@ -131,6 +157,27 @@
   }
   @media (orientation:portrait) and (max-width:600px){
     #rotateHint.show{ display:block; }
+  }
+
+  /* leaderboard */
+  .lbTable{
+    width:min(92%,420px); max-height:38vh; overflow-y:auto;
+    display:flex; flex-direction:column; gap:5px;
+  }
+  .lbRow{
+    display:grid; grid-template-columns:34px 1fr 76px; align-items:center;
+    background:rgba(255,255,255,0.92); color:var(--text);
+    border-radius:10px; padding:7px 12px; font-weight:700;
+    font-size:clamp(13px,2.6vw,16px);
+  }
+  .lbRow.lbRowMe{ background:#fff3b0; border:2px solid #f2c94c; }
+  .lbRank{ font-weight:900; color:#888; }
+  .lbName{ text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 6px; }
+  .lbScore{ text-align:right; color:#c9463a; }
+  #nameEntryRow{ display:flex; gap:8px; align-items:center; }
+  #nameInput{
+    font-size:15px; padding:10px 14px; border-radius:999px;
+    border:none; width:170px; text-align:center; font-weight:700;
   }
 </style>
 </head>
@@ -147,22 +194,43 @@
   <div id="toast"></div>
 
   <div id="startScreen" class="overlay">
-    <h1>🏃 달려라 승서! 🏃</h1>
-    <p>스페이스바 또는 화면을 눌러서 점프하고<br>장애물을 피해요!<br>가끔 멈춰서 영어 단어랑 수학 문제를 맞춰야 해요.</p>
-    <button class="bigbtn" id="startBtn">시작하기</button>
+    <h1>⛷️ 달려라 승서! ⛷️</h1>
+    <p>스페이스바 또는 화면을 눌러서 점프하고<br>장애물을 피해요!<br>가끔 멈춰서 영어·수학·국어 문제를 10초 안에 맞춰야 해요.<br>틀리면 하트가 줄고, 맞히면 거리가 늘어나요!</p>
+    <div class="btnRow">
+      <button class="bigbtn" id="startBtn">시작하기</button>
+      <button class="bigbtn alt" id="leaderboardBtn">🏆 리더보드</button>
+    </div>
     <p id="keyhint">PC: 스페이스바 / 위쪽 화살표 = 점프</p>
   </div>
 
   <div id="quizOverlay" class="overlay hidden">
+    <div id="quizCategory">문제</div>
     <p id="quizSub">문제를 맞추면 다시 달릴 수 있어요!</p>
     <div id="quizQuestion">?</div>
+    <div id="quizTimerRow">
+      <div id="quizTimerWrap"><div id="quizTimerBar"></div></div>
+      <div id="quizTimerNum">10</div>
+    </div>
     <div id="quizChoices"></div>
   </div>
 
   <div id="gameOverScreen" class="overlay hidden">
     <h1>게임 끝! 💥</h1>
     <p>이번 거리: <span id="finalScore">0</span>m &nbsp; | &nbsp; 최고 기록: <span id="bestScore">0</span>m</p>
-    <button class="bigbtn" id="restartBtn">다시 하기</button>
+    <div id="nameEntryRow" class="hidden">
+      <input id="nameInput" maxlength="10" placeholder="이름을 입력하세요">
+      <button class="bigbtn" id="saveScoreBtn" style="padding:10px 20px;">저장</button>
+    </div>
+    <div id="lbGameOverList"></div>
+    <div class="btnRow">
+      <button class="bigbtn" id="restartBtn">다시 하기</button>
+    </div>
+  </div>
+
+  <div id="leaderboardOverlay" class="overlay hidden">
+    <h1>🏆 리더보드</h1>
+    <div id="lbStartList"></div>
+    <button class="bigbtn alt" id="closeLeaderboardBtn">닫기</button>
   </div>
 </div>
 
@@ -183,20 +251,32 @@
 
   const startScreen = document.getElementById('startScreen');
   const startBtn = document.getElementById('startBtn');
+  const leaderboardBtn = document.getElementById('leaderboardBtn');
 
   const quizOverlay = document.getElementById('quizOverlay');
+  const quizCategory = document.getElementById('quizCategory');
+  const quizSub = document.getElementById('quizSub');
   const quizQuestion = document.getElementById('quizQuestion');
   const quizChoices = document.getElementById('quizChoices');
+  const quizTimerBar = document.getElementById('quizTimerBar');
+  const quizTimerNum = document.getElementById('quizTimerNum');
 
   const gameOverScreen = document.getElementById('gameOverScreen');
   const finalScoreEl = document.getElementById('finalScore');
   const bestScoreEl = document.getElementById('bestScore');
   const restartBtn = document.getElementById('restartBtn');
+  const nameEntryRow = document.getElementById('nameEntryRow');
+  const nameInput = document.getElementById('nameInput');
+  const saveScoreBtn = document.getElementById('saveScoreBtn');
+  const lbGameOverList = document.getElementById('lbGameOverList');
+
+  const leaderboardOverlay = document.getElementById('leaderboardOverlay');
+  const lbStartList = document.getElementById('lbStartList');
+  const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
 
   // ---- canvas sizing ----
   const BASE_W = 900, BASE_H = 500;
   function resize(){
-    const rect = stage.getBoundingClientRect();
     canvas.width = BASE_W;
     canvas.height = BASE_H;
   }
@@ -205,20 +285,7 @@
 
   const GROUND_Y = BASE_H - 90;
 
-  // ---- word bank (Korean meaning -> English word) ----
-  const WORD_BANK = [
-    ["사과","Apple"],["바나나","Banana"],["포도","Grape"],["수박","Watermelon"],
-    ["딸기","Strawberry"],["오렌지","Orange"],["강아지","Dog"],["고양이","Cat"],
-    ["토끼","Rabbit"],["사자","Lion"],["코끼리","Elephant"],["호랑이","Tiger"],
-    ["원숭이","Monkey"],["물고기","Fish"],["새","Bird"],["빨간색","Red"],
-    ["파란색","Blue"],["노란색","Yellow"],["초록색","Green"],["검은색","Black"],
-    ["하얀색","White"],["학교","School"],["선생님","Teacher"],["친구","Friend"],
-    ["책","Book"],["연필","Pencil"],["의자","Chair"],["창문","Window"],
-    ["하늘","Sky"],["별","Star"],["달","Moon"],["해","Sun"],
-    ["비","Rain"],["눈","Snow"],["여름","Summer"],["겨울","Winter"],
-    ["엄마","Mother"],["아빠","Father"],["형/오빠","Brother"],["누나/언니","Sister"]
-  ];
-
+  function rand(min,max){ min=Math.ceil(min); max=Math.floor(max); return Math.floor(Math.random()*(max-min+1))+min; }
   function shuffle(arr){
     const a = arr.slice();
     for(let i=a.length-1;i>0;i--){
@@ -227,33 +294,99 @@
     }
     return a;
   }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---- quiz banks ----
+  // English: middle/high-school level vocabulary
+  const EN_BANK = [
+    ["풍부한","Abundant"],["세심한, 꼼꼼한","Meticulous"],["임의의, 제멋대로인","Arbitrary"],
+    ["부지런한","Diligent"],["불가피한","Inevitable"],["애매모호한","Ambiguous"],
+    ["그럴듯한","Plausible"],["악명 높은","Notorious"],["자애로운, 인자한","Benevolent"],
+    ["솔직한","Candid"],["지루한","Tedious"],["웅변적인, 유창한","Eloquent"],
+    ["실현 가능한","Feasible"],["적대적인","Hostile"],["거대한","Immense"],
+    ["기뻐하는","Jubilant"],["수익성이 좋은","Lucrative"],["평범한, 세속적인","Mundane"],
+    ["초보자","Novice"],["구식의, 쓸모없는","Obsolete"],["실용적인","Pragmatic"],
+    ["예스러운, 진기한","Quaint"],["회복력 있는","Resilient"],["부족한, 희소한","Scarce"],
+    ["평온한","Tranquil"],["만장일치의","Unanimous"],["생생한","Vivid"],
+    ["경계하는, 조심스러운","Wary"],["열성적인","Zealous"],["포괄적인","Comprehensive"],
+    ["거만한","Arrogant"],["일관성 있는","Coherent"],["악화되다","Deteriorate"],
+    ["향상시키다","Enhance"],["변동하다","Fluctuate"],["편입시키다, 포함하다","Incorporate"],
+    ["정당화하다","Justify"],["규모, 중요도","Magnitude"],["협상하다","Negotiate"],
+    ["압도하다","Overwhelm"],["끈질긴, 집요한","Persistent"],["마지못한","Reluctant"],
+    ["상당한","Substantial"],["철저한","Thorough"],["약화시키다","Undermine"],
+    ["다재다능한","Versatile"]
+  ];
+
+  // Korean idioms (사자성어) / proverbs (속담): [정의, 정답]
+  const KR_BANK = [
+    ["매우 위급하고 위태로운 상황","풍전등화"],
+    ["아무리 힘들어도 꾸준히 노력하면 결국 이룬다","우공이산"],
+    ["서로 도와 이익을 나눔","상부상조"],
+    ["겉과 속이 서로 다름","표리부동"],
+    ["한 가지 일로 두 가지 이익을 얻음","일석이조"],
+    ["매우 심각하고 위태로운 순간","일촉즉발"],
+    ["몹시 놀라 넋을 잃음","혼비백산"],
+    ["말과 행동이 하나로 들어맞음","언행일치"],
+    ["시작은 거창하나 끝이 흐지부지함","용두사미"],
+    ["갖은 애를 써서 노력함","각고면려"],
+    ["여러 사람의 말이 한결같음","이구동성"],
+    ["세상의 온갖 고생을 다 겪음","산전수전"],
+    ["고생 끝에 즐거움이 옴","고진감래"],
+    ["훌륭한 사람 밑에서 훌륭한 인재가 나옴","청출어람"],
+    ["실패를 딛고 다시 일어섬","칠전팔기"],
+    ["아무리 익숙한 사람도 실수할 때가 있다","원숭이도 나무에서 떨어진다"],
+    ["말을 조심해야 한다, 소문은 빨리 퍼진다","발 없는 말이 천리 간다"],
+    ["작은 노력도 꾸준히 하면 큰 결과를 만든다","낙숫물이 바위를 뚫는다"],
+    ["일이 이미 벌어진 뒤 대비해도 소용없다","소 잃고 외양간 고친다"],
+    ["급할수록 침착하게 순서를 지켜야 한다","급할수록 돌아가라"],
+    ["쉬운 일도 힘을 합치면 더 쉬워진다","백지장도 맞들면 낫다"],
+    ["잘 될 사람은 어려서부터 남다른 데가 있다","될성부른 나무는 떡잎부터 알아본다"],
+    ["내가 잘해야 남도 나에게 잘한다","가는 말이 고와야 오는 말이 곱다"],
+    ["아무리 좋은 것도 쓸모 있게 다듬어야 값어치가 있다","구슬이 서 말이라도 꿰어야 보배"]
+  ];
 
   function makeWordQuiz(){
-    const idx = Math.floor(Math.random()*WORD_BANK.length);
-    const [kr, en] = WORD_BANK[idx];
-    const wrongPool = WORD_BANK.filter((_,i)=>i!==idx).map(w=>w[1]);
+    const idx = Math.floor(Math.random()*EN_BANK.length);
+    const [kr, en] = EN_BANK[idx];
+    const wrongPool = EN_BANK.filter((_,i)=>i!==idx).map(w=>w[1]);
     const wrongs = shuffle(wrongPool).slice(0,3);
     const options = shuffle([en, ...wrongs]);
     return { question: kr, answer: en, options };
   }
 
-  function makeMathQuiz(difficultyTier){
-    let a,b,op,answer;
-    op = Math.random() < 0.5 ? '+' : '-';
-    const maxN = 10 + difficultyTier*5;
+  function makeKoreanQuiz(){
+    const idx = Math.floor(Math.random()*KR_BANK.length);
+    const [def, ans] = KR_BANK[idx];
+    const wrongPool = KR_BANK.filter((_,i)=>i!==idx).map(w=>w[1]);
+    const wrongs = shuffle(wrongPool).slice(0,3);
+    const options = shuffle([ans, ...wrongs]);
+    return { question: def, answer: ans, options };
+  }
+
+  function makeMathQuiz(tier){
+    const ops = ['+','-','×','÷'];
+    const op = ops[Math.floor(Math.random()*ops.length)];
+    const range = 12 + tier*8;
+    let a,b,answer;
     if(op === '+'){
-      a = Math.floor(Math.random()*maxN)+1;
-      b = Math.floor(Math.random()*maxN)+1;
-      answer = a+b;
+      a = rand(1,range); b = rand(1,range); answer = a+b;
+    } else if(op === '-'){
+      a = rand(Math.max(2,Math.floor(range/2)), range+10); b = rand(1,a); answer = a-b;
+    } else if(op === '×'){
+      a = rand(2, 9+Math.min(tier,4)); b = rand(2, 12+tier*2); answer = a*b;
     } else {
-      a = Math.floor(Math.random()*maxN)+5;
-      b = Math.floor(Math.random()*a);
-      answer = a-b;
+      b = rand(2, 9+Math.min(tier,3));
+      const q = rand(2, 12+tier*2);
+      a = b*q; answer = q;
     }
     const question = `${a} ${op} ${b} = ?`;
     const wrongsSet = new Set();
-    while(wrongsSet.size < 3){
-      const delta = Math.floor(Math.random()*7)-3;
+    let guard = 0;
+    while(wrongsSet.size < 3 && guard < 50){
+      guard++;
+      const delta = rand(-6,6) || 3;
       const w = answer + delta;
       if(w !== answer && w >= 0) wrongsSet.add(w);
     }
@@ -261,15 +394,65 @@
     return { question, answer:String(answer), options };
   }
 
+  // ---- leaderboard (localStorage) ----
+  const LB_KEY = 'runnerLeaderboardV2';
+  function getLeaderboard(){
+    try{ return JSON.parse(localStorage.getItem(LB_KEY)) || []; }
+    catch(e){ return []; }
+  }
+  function saveLeaderboard(list){ localStorage.setItem(LB_KEY, JSON.stringify(list)); }
+  function qualifiesForLeaderboard(score){
+    const list = getLeaderboard();
+    return list.length < 10 || score > list[list.length-1].score;
+  }
+  function addToLeaderboard(name, score){
+    const list = getLeaderboard();
+    const entry = { name: (name||'승서').slice(0,10), score, ts: Date.now() };
+    list.push(entry);
+    list.sort((a,b)=> b.score - a.score);
+    const trimmed = list.slice(0,10);
+    saveLeaderboard(trimmed);
+    return { list: trimmed, entry };
+  }
+  function renderLeaderboard(container, highlightEntry){
+    const list = getLeaderboard();
+    container.innerHTML = '';
+    if(list.length === 0){
+      container.innerHTML = '<p style="opacity:.85">아직 기록이 없어요. 첫 기록의 주인공이 되어보세요!</p>';
+      return;
+    }
+    const table = document.createElement('div');
+    table.className = 'lbTable';
+    list.forEach((e,i)=>{
+      const row = document.createElement('div');
+      const isMe = highlightEntry && e.ts === highlightEntry.ts && e.score === highlightEntry.score;
+      row.className = 'lbRow' + (isMe ? ' lbRowMe' : '');
+      row.innerHTML = `<span class="lbRank">${i+1}</span><span class="lbName">${escapeHtml(e.name)}</span><span class="lbScore">${e.score}m</span>`;
+      table.appendChild(row);
+    });
+    container.appendChild(table);
+  }
+
+  leaderboardBtn.addEventListener('click', ()=>{
+    renderLeaderboard(lbStartList, null);
+    startScreen.classList.add('hidden');
+    leaderboardOverlay.classList.remove('hidden');
+  });
+  closeLeaderboardBtn.addEventListener('click', ()=>{
+    leaderboardOverlay.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+  });
+
   // ---- game state ----
   let state = 'ready'; // ready, running, quiz, gameover
   let player, obstacles, speed, distance, lives, nextQuizAt, best, invincibleTimer, lastTime;
-  const GRAVITY = 2200;
-  const JUMP_V = -820;
-  const GROUND_FRICTION = 1;
+  const GRAVITY = 2300;
+  const JUMP_V = -860;
+
+  const PLAYER_W = 68, PLAYER_H = 108;
 
   function resetGame(){
-    player = { x:110, y:GROUND_Y, w:46, h:56, vy:0, onGround:true, blink:0 };
+    player = { x:120, y:GROUND_Y, w:PLAYER_W, h:PLAYER_H, vy:0, onGround:true, runPhase:0 };
     obstacles = [];
     speed = 320;
     distance = 0;
@@ -283,7 +466,7 @@
 
   let spawnTimer = 0;
   function randSpawnGap(){
-    return 900 + Math.random()*700;
+    return 1100 + Math.random()*800;
   }
 
   function updateHearts(){
@@ -346,39 +529,91 @@
 
   // ---- quiz flow ----
   let quizCount = 0;
+  let quizDeadline = 0;
+  let quizAnswered = false;
+  const QUIZ_TYPES = ['en','math','kr'];
+  const QUIZ_MS = 10000;
+
   function triggerQuiz(){
     state = 'quiz';
+    const type = QUIZ_TYPES[quizCount % QUIZ_TYPES.length];
     quizCount++;
-    const isWord = quizCount % 2 === 1;
-    const tier = Math.min(Math.floor(distance/500), 4);
-    const q = isWord ? makeWordQuiz() : makeMathQuiz(tier);
-    document.getElementById('quizSub').textContent = isWord
-      ? '이 뜻을 가진 영어 단어를 골라보세요!'
-      : '수학 문제를 풀어보세요!';
+    const tier = Math.min(Math.floor(distance/400), 5);
+    let q, label, sub;
+    if(type === 'en'){
+      q = makeWordQuiz();
+      label = '🔤 영어';
+      sub = '이 뜻을 가진 영어 단어를 골라보세요!';
+    } else if(type === 'kr'){
+      q = makeKoreanQuiz();
+      label = '📖 국어';
+      sub = '이 뜻에 맞는 사자성어·속담을 골라보세요!';
+    } else {
+      q = makeMathQuiz(tier);
+      label = '➗ 수학';
+      sub = '계산 문제를 풀어보세요!';
+    }
+    quizCategory.textContent = label;
+    quizSub.textContent = sub;
     quizQuestion.textContent = q.question;
     quizChoices.innerHTML = '';
+    quizAnswered = false;
+    quizDeadline = performance.now() + QUIZ_MS;
+    quizTimerBar.style.width = '100%';
+    quizTimerNum.textContent = '10';
+
     q.options.forEach((opt)=>{
       const btn = document.createElement('button');
       btn.className = 'choiceBtn';
       btn.textContent = opt;
-      btn.addEventListener('click', ()=>{
-        const buttons = quizChoices.querySelectorAll('.choiceBtn');
-        buttons.forEach(b=>b.disabled = true);
-        if(opt === q.answer){
-          btn.classList.add('correct');
-          showToast('정답이에요! 🎉', 900);
-          distance += 20;
-          setTimeout(closeQuiz, 700);
-        } else {
-          btn.classList.add('wrong');
-          buttons.forEach(b=>{ if(b.textContent === q.answer) b.classList.add('correct'); });
-          showToast('괜찮아요, 다음엔 맞출 수 있어요!', 1300);
-          setTimeout(closeQuiz, 1300);
-        }
-      });
+      btn.addEventListener('click', ()=> handleAnswer(opt, q.answer, btn));
       quizChoices.appendChild(btn);
     });
     quizOverlay.classList.remove('hidden');
+  }
+
+  function handleAnswer(opt, correctAnswer, btnEl){
+    if(quizAnswered) return;
+    quizAnswered = true;
+    const buttons = quizChoices.querySelectorAll('.choiceBtn');
+    buttons.forEach(b=>b.disabled = true);
+
+    if(opt === correctAnswer){
+      if(btnEl) btnEl.classList.add('correct');
+      showToast('정답이에요! 🎉 +40m', 900);
+      distance += 40;
+      setTimeout(closeQuiz, 700);
+    } else {
+      if(btnEl) btnEl.classList.add('wrong');
+      buttons.forEach(b=>{ if(b.textContent === correctAnswer) b.classList.add('correct'); });
+      loseHeartFromQuiz();
+    }
+  }
+
+  function handleQuizTimeout(){
+    if(quizAnswered) return;
+    quizAnswered = true;
+    const buttons = quizChoices.querySelectorAll('.choiceBtn');
+    buttons.forEach(b=>{
+      b.disabled = true;
+    });
+    showToast('시간 초과! ⏰', 1200);
+    loseHeartFromQuiz();
+  }
+
+  function loseHeartFromQuiz(){
+    lives--;
+    updateHearts();
+    if(lives <= 0){
+      showToast('괜찮아요, 다음엔 더 잘할 수 있어요!', 1200);
+      setTimeout(()=>{
+        quizOverlay.classList.add('hidden');
+        endGame();
+      }, 1300);
+    } else {
+      showToast('괜찮아요, 다음엔 더 잘할 수 있어요!', 1300);
+      setTimeout(closeQuiz, 1300);
+    }
   }
 
   function closeQuiz(){
@@ -391,7 +626,7 @@
   // ---- collision ----
   function checkCollision(o){
     const px = player.x, py = player.y - player.h, pw = player.w, ph = player.h;
-    const pad = 8;
+    const pad = 12;
     return (px+pad) < (o.x+o.w) && (px+pw-pad) > o.x &&
            (py+pad) < (o.y+o.h) && (py+ph-pad) > o.y;
   }
@@ -418,15 +653,33 @@
     }
     finalScoreEl.textContent = finalDist;
     bestScoreEl.textContent = best;
+
+    if(qualifiesForLeaderboard(finalDist) && finalDist > 0){
+      nameEntryRow.classList.remove('hidden');
+      lbGameOverList.innerHTML = '';
+      nameInput.value = '';
+      const doSave = ()=>{
+        const { list, entry } = addToLeaderboard(nameInput.value.trim(), finalDist);
+        nameEntryRow.classList.add('hidden');
+        renderLeaderboard(lbGameOverList, entry);
+        saveScoreBtn.onclick = null;
+      };
+      saveScoreBtn.onclick = doSave;
+      nameInput.onkeydown = (e)=>{ if(e.key === 'Enter') doSave(); };
+    } else {
+      nameEntryRow.classList.add('hidden');
+      renderLeaderboard(lbGameOverList, null);
+    }
+
     gameOverScreen.classList.remove('hidden');
   }
 
-  // ---- obstacle spawn ----
+  // ---- obstacles ----
   const OBSTACLE_TYPES = [
-    { emoji:'🌵', w:40, h:56 },
-    { emoji:'🪨', w:46, h:40 },
-    { emoji:'🦴', w:44, h:26 },
-    { emoji:'🧱', w:40, h:40 },
+    { type:'rock',    w:72, h:62 },
+    { type:'tree',    w:64, h:104 },
+    { type:'snowman', w:56, h:94 },
+    { type:'gate',    w:46, h:112 },
   ];
   function spawnObstacle(){
     const t = OBSTACLE_TYPES[Math.floor(Math.random()*OBSTACLE_TYPES.length)];
@@ -434,55 +687,425 @@
       x: BASE_W + 20,
       y: GROUND_Y - t.h,
       w: t.w, h: t.h,
-      emoji: t.emoji,
-      passed:false
+      type: t.type,
+      variant: Math.random() < 0.5 ? 0 : 1
     });
   }
 
-  // ---- draw ----
-  let groundScroll = 0;
-  function draw(){
-    ctx.clearRect(0,0,BASE_W,BASE_H);
-
-    // sky gradient already via CSS bg, draw sun + clouds
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    [[120,70,26],[210,50,18],[700,60,22],[780,90,16]].forEach(([cx,cy,r])=>{
-      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx+r*0.8,cy+6,r*0.7,0,Math.PI*2); ctx.fill();
-    });
-
-    // ground
-    ctx.fillStyle = '#8bc34a';
-    ctx.fillRect(0, GROUND_Y, BASE_W, BASE_H-GROUND_Y);
-    ctx.fillStyle = '#6fa83a';
-    ctx.fillRect(0, GROUND_Y, BASE_W, 10);
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([24,20]);
+  // ---- drawing helpers ----
+  function roundRectPath(x,y,w,h,r){
+    if(typeof r === 'number') r = {tl:r,tr:r,br:r,bl:r};
     ctx.beginPath();
-    ctx.moveTo(-groundScroll % 44, GROUND_Y+40);
-    ctx.lineTo(BASE_W, GROUND_Y+40);
+    ctx.moveTo(x+r.tl,y);
+    ctx.lineTo(x+w-r.tr,y);
+    ctx.arcTo(x+w,y,x+w,y+r.tr,r.tr);
+    ctx.lineTo(x+w,y+h-r.br);
+    ctx.arcTo(x+w,y+h,x+w-r.br,y+h,r.br);
+    ctx.lineTo(x+r.bl,y+h);
+    ctx.arcTo(x,y+h,x,y+h-r.bl,r.bl);
+    ctx.lineTo(x,y+r.tl);
+    ctx.arcTo(x,y,x+r.tl,y,r.tl);
+    ctx.closePath();
+  }
+
+  // ---- background ----
+  let bg1 = 0, bg2 = 0, groundScroll = 0;
+  const MOUNTAIN_PERIOD = 320;
+  const HILL_PERIOD = 260;
+
+  function drawBackground(){
+    // soft sun glow
+    const sunG = ctx.createRadialGradient(760,80,10,760,80,160);
+    sunG.addColorStop(0,'rgba(255,247,214,0.9)');
+    sunG.addColorStop(1,'rgba(255,247,214,0)');
+    ctx.fillStyle = sunG;
+    ctx.fillRect(560,-80,400,320);
+
+    // far mountains (parallax)
+    ctx.fillStyle = '#c3cdea';
+    for(let i=-1;i<=Math.ceil(BASE_W/MOUNTAIN_PERIOD)+1;i++){
+      const baseX = i*MOUNTAIN_PERIOD - (bg1 % MOUNTAIN_PERIOD);
+      ctx.beginPath();
+      ctx.moveTo(baseX, GROUND_Y-40);
+      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.28, GROUND_Y-170);
+      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.55, GROUND_Y-40);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#eef2fb';
+      ctx.beginPath();
+      ctx.moveTo(baseX+MOUNTAIN_PERIOD*0.28, GROUND_Y-170);
+      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.20, GROUND_Y-118);
+      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.28+16, GROUND_Y-122);
+      ctx.lineTo(baseX+MOUNTAIN_PERIOD*0.36, GROUND_Y-118);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#c3cdea';
+    }
+
+    // mid hills (parallax, faster)
+    ctx.fillStyle = '#e7edf9';
+    for(let i=-1;i<=Math.ceil(BASE_W/HILL_PERIOD)+1;i++){
+      const baseX = i*HILL_PERIOD - (bg2 % HILL_PERIOD);
+      ctx.beginPath();
+      ctx.moveTo(baseX-20, GROUND_Y+6);
+      ctx.quadraticCurveTo(baseX+HILL_PERIOD*0.5, GROUND_Y-78, baseX+HILL_PERIOD+20, GROUND_Y+6);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // clouds
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    const clouds = [[130,66,28],[230,50,20],[640,58,24],[760,92,18]];
+    clouds.forEach(([cx,cy,r])=>{
+      const x = ((cx - bg1*0.4) % (BASE_W+200) + (BASE_W+200)) % (BASE_W+200) - 100;
+      ctx.beginPath(); ctx.ellipse(x,cy,r*1.3,r*0.85,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x+r*0.9,cy+5,r,r*0.7,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x-r*0.8,cy+6,r*0.8,r*0.6,0,0,Math.PI*2); ctx.fill();
+    });
+  }
+
+  function drawGround(){
+    // snowy path
+    const g = ctx.createLinearGradient(0,GROUND_Y,0,BASE_H);
+    g.addColorStop(0,'#ffffff');
+    g.addColorStop(1,'#dfe9f5');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, GROUND_Y, BASE_W, BASE_H-GROUND_Y);
+
+    ctx.fillStyle = '#c9d7ec';
+    ctx.fillRect(0, GROUND_Y, BASE_W, 6);
+
+    // ski track dashes
+    ctx.strokeStyle = 'rgba(140,165,205,0.55)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([28,22]);
+    ctx.beginPath();
+    ctx.moveTo(-groundScroll % 50, GROUND_Y+34);
+    ctx.lineTo(BASE_W, GROUND_Y+34);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-(groundScroll+18) % 50, GROUND_Y+62);
+    ctx.lineTo(BASE_W, GROUND_Y+62);
     ctx.stroke();
     ctx.setLineDash([]);
+  }
 
-    // player
+  // ---- player drawing (cute girl skier character) ----
+  function drawPlayer(p){
+    const cx = p.x + p.w/2;
+    const footY = p.y;
+    const H = p.h, W = p.w;
+    const airborne = !p.onGround;
+    const phase = p.runPhase;
+
     ctx.save();
+    ctx.translate(cx, footY);
     if(invincibleTimer > 0 && Math.floor(invincibleTimer*10)%2===0){
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.45;
     }
-    ctx.font = '54px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('🏃', player.x + player.w/2, player.y);
-    ctx.restore();
 
-    // obstacles
-    ctx.font = '46px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    obstacles.forEach(o=>{
-      ctx.fillText(o.emoji, o.x + o.w/2, o.y + o.h + 6);
+    const legSwing = airborne ? 0 : Math.sin(phase);
+    const legSwing2 = airborne ? 0 : Math.sin(phase+Math.PI);
+    const legLiftBase = airborne ? -H*0.16 : 0;
+
+    // shadow
+    ctx.fillStyle = 'rgba(60,70,100,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(0, 4, W*0.42, 7, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // back leg
+    drawLeg(-legSwing, legLiftBase, W, H, '#3a3f6b');
+    // back arm
+    drawArm(legSwing, H, W, '#3a3f6b', true);
+
+    // torso (puffer jacket)
+    const hipY = -H*0.42, shoulderY = -H*0.74;
+    const torsoW = W*0.62;
+    roundRectPath(-torsoW/2, shoulderY, torsoW, hipY-shoulderY, 14);
+    const jacketG = ctx.createLinearGradient(0,shoulderY,0,hipY);
+    jacketG.addColorStop(0,'#5c6ea0');
+    jacketG.addColorStop(1,'#3f4d80');
+    ctx.fillStyle = jacketG;
+    ctx.fill();
+    // zipper
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, shoulderY+6);
+    ctx.lineTo(0, hipY-4);
+    ctx.stroke();
+
+    // scarf
+    ctx.fillStyle = '#e6483c';
+    ctx.beginPath();
+    ctx.ellipse(0, shoulderY+4, torsoW*0.42, 9, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-torsoW*0.30, shoulderY+8);
+    ctx.lineTo(-torsoW*0.55, shoulderY+30 + Math.sin(phase)*4);
+    ctx.lineTo(-torsoW*0.20, shoulderY+16);
+    ctx.closePath();
+    ctx.fill();
+
+    // front leg
+    drawLeg(legSwing, legLiftBase, W, H, '#4a5090');
+    // front arm
+    drawArm(-legSwing, H, W, '#4a5090', false);
+
+    // head group
+    const headR = H*0.205;
+    const headCY = shoulderY - headR*0.95;
+
+    // ponytail (behind head)
+    ctx.fillStyle = '#2b2320';
+    ctx.beginPath();
+    ctx.moveTo(headR*0.55, headCY-headR*0.2);
+    ctx.quadraticCurveTo(headR*1.7, headCY+headR*0.5, headR*1.1, headCY+headR*1.9);
+    ctx.quadraticCurveTo(headR*0.85, headCY+headR*1.3, headR*0.5, headCY+headR*0.3);
+    ctx.closePath();
+    ctx.fill();
+
+    // hair behind head
+    ctx.fillStyle = '#2b2320';
+    ctx.beginPath();
+    ctx.arc(0, headCY, headR*1.04, 0, Math.PI*2);
+    ctx.fill();
+
+    // face
+    ctx.fillStyle = '#ffe0bd';
+    ctx.beginPath();
+    ctx.arc(0, headCY+headR*0.08, headR*0.93, 0, Math.PI*2);
+    ctx.fill();
+
+    // rosy cheeks
+    ctx.fillStyle = 'rgba(255,140,140,0.55)';
+    ctx.beginPath(); ctx.ellipse(-headR*0.5, headCY+headR*0.35, headR*0.18, headR*0.11, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(headR*0.5, headCY+headR*0.35, headR*0.18, headR*0.11, 0, 0, Math.PI*2); ctx.fill();
+
+    // eyes
+    ctx.fillStyle = '#2b2320';
+    [-1,1].forEach(side=>{
+      ctx.beginPath();
+      ctx.ellipse(side*headR*0.38, headCY+headR*0.05, headR*0.12, headR*0.15, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(side*headR*0.38+headR*0.04, headCY+headR*0.0, headR*0.045, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#2b2320';
     });
+
+    // smile
+    ctx.strokeStyle = '#b5654f';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(0, headCY+headR*0.42, headR*0.28, 0.15*Math.PI, 0.85*Math.PI);
+    ctx.stroke();
+
+    // helmet (clip to upper dome area)
+    ctx.save();
+    roundRectPath(-headR*1.15, headCY-headR*1.2, headR*2.3, headR*1.55, {tl:headR,tr:headR,br:0,bl:0});
+    ctx.clip();
+    const helmG = ctx.createLinearGradient(-headR,headCY-headR,headR,headCY+headR*0.3);
+    helmG.addColorStop(0,'#ff8a7a');
+    helmG.addColorStop(0.5,'#e6483c');
+    helmG.addColorStop(1,'#b52f26');
+    ctx.fillStyle = helmG;
+    ctx.beginPath();
+    ctx.arc(0, headCY, headR*1.12, 0, Math.PI*2);
+    ctx.fill();
+    // shine
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(-headR*0.4, headCY-headR*0.5, headR*0.22, headR*0.12, -0.4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    // helmet brim
+    ctx.strokeStyle = '#8f221b';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-headR*1.02, headCY-headR*0.12);
+    ctx.lineTo(headR*1.02, headCY-headR*0.12);
+    ctx.stroke();
+    // vents
+    ctx.fillStyle = '#8f221b';
+    for(let i=-1;i<=1;i++){
+      ctx.fillRect(i*headR*0.32-headR*0.06, headCY-headR*0.06, headR*0.12, headR*0.05);
+    }
+
+    // chin strap
+    ctx.strokeStyle = '#232020';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-headR*0.85, headCY-headR*0.1);
+    ctx.quadraticCurveTo(-headR*0.95, headCY+headR*0.75, -headR*0.25, headCY+headR*0.95);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(headR*0.85, headCY-headR*0.1);
+    ctx.quadraticCurveTo(headR*0.95, headCY+headR*0.75, headR*0.25, headCY+headR*0.95);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawLeg(swing, lift, W, H, color){
+    const hipY = -H*0.42;
+    const legW = W*0.20;
+    const legLen = H*0.40;
+    const xOff = swing*W*0.16;
+    const footDrop = airborneSafe(lift);
+    ctx.save();
+    roundRectPath(xOff-legW/2, hipY+footDrop, legW, legLen*(1-Math.abs(swing)*0.12), legW*0.45);
+    ctx.fillStyle = color;
+    ctx.fill();
+    // boot
+    const bootY = hipY+footDrop+legLen*(1-Math.abs(swing)*0.12);
+    roundRectPath(xOff-legW*0.6, bootY-4, legW*1.2, legW*0.9, 4);
+    ctx.fillStyle = '#232323';
+    ctx.fill();
+    ctx.restore();
+  }
+  function airborneSafe(v){ return v; }
+
+  function drawArm(swing, H, W, color, isBack){
+    const shoulderY = -H*0.72;
+    const armLen = H*0.30;
+    const xOff = swing*W*0.14 + (isBack? -W*0.02 : W*0.02);
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = W*0.14;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(isBack? -W*0.24 : W*0.24, shoulderY+H*0.05);
+    ctx.lineTo(xOff*1.3 + (isBack? -W*0.1 : W*0.1), shoulderY+armLen);
+    ctx.stroke();
+    // mitten
+    ctx.fillStyle = '#e6483c';
+    ctx.beginPath();
+    ctx.arc(xOff*1.3 + (isBack? -W*0.1 : W*0.1), shoulderY+armLen, W*0.09, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ---- obstacle drawing ----
+  function drawObstacle(o){
+    const x = o.x, yTop = o.y, w = o.w, h = o.h;
+    ctx.save();
+    // ground shadow
+    ctx.fillStyle = 'rgba(60,70,100,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(x+w/2, yTop+h+2, w*0.45, 7, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    if(o.type === 'rock'){
+      const g = ctx.createLinearGradient(x,yTop,x,yTop+h);
+      g.addColorStop(0,'#aab6cc');
+      g.addColorStop(1,'#707d99');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.05, yTop+h);
+      ctx.lineTo(x, yTop+h*0.55);
+      ctx.lineTo(x+w*0.22, yTop+h*0.18);
+      ctx.lineTo(x+w*0.55, yTop);
+      ctx.lineTo(x+w*0.85, yTop+h*0.22);
+      ctx.lineTo(x+w, yTop+h*0.6);
+      ctx.lineTo(x+w*0.95, yTop+h);
+      ctx.closePath();
+      ctx.fill();
+      // snow cap
+      ctx.fillStyle = '#f5f9ff';
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.18, yTop+h*0.28);
+      ctx.quadraticCurveTo(x+w*0.55, yTop-h*0.06, x+w*0.82, yTop+h*0.26);
+      ctx.quadraticCurveTo(x+w*0.55, yTop+h*0.14, x+w*0.18, yTop+h*0.28);
+      ctx.fill();
+    }
+    else if(o.type === 'tree'){
+      const trunkW = w*0.18;
+      ctx.fillStyle = '#6b4a30';
+      ctx.fillRect(x+w/2-trunkW/2, yTop+h*0.82, trunkW, h*0.18);
+      const layers = [
+        {yb:h*0.90, w:w*1.0,  yt:h*0.55},
+        {yb:h*0.62, w:w*0.82, yt:h*0.28},
+        {yb:h*0.36, w:w*0.60, yt:h*0.02},
+      ];
+      layers.forEach((L,i)=>{
+        const g = ctx.createLinearGradient(x,yTop+L.yt,x,yTop+L.yb);
+        g.addColorStop(0,'#3f7a52');
+        g.addColorStop(1,'#255336');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(x+w/2, yTop+L.yt);
+        ctx.lineTo(x+w/2-L.w/2, yTop+L.yb);
+        ctx.lineTo(x+w/2+L.w/2, yTop+L.yb);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        for(let k=0;k<3;k++){
+          const fx = x+w/2 - L.w/2 + (L.w/3)*k + (L.w/6);
+          ctx.beginPath();
+          ctx.ellipse(fx, yTop+L.yb-2, L.w*0.11, 4, 0, 0, Math.PI*2);
+          ctx.fill();
+        }
+      });
+    }
+    else if(o.type === 'snowman'){
+      const cx = x+w/2;
+      const bottomR = w*0.46, topR = w*0.32;
+      const bottomCY = yTop+h-bottomR*0.95;
+      const topCY = yTop+topR*1.05;
+      const sg = ctx.createLinearGradient(x,yTop,x,yTop+h);
+      sg.addColorStop(0,'#ffffff');
+      sg.addColorStop(1,'#dbe6f2');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(cx,bottomCY,bottomR,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,topCY,topR,0,Math.PI*2); ctx.fill();
+      // hat
+      ctx.fillStyle = '#232323';
+      ctx.fillRect(cx-topR*0.7, topCY-topR*1.35, topR*1.4, topR*0.3);
+      ctx.fillRect(cx-topR*0.45, topCY-topR*1.9, topR*0.9, topR*0.6);
+      // buttons
+      ctx.fillStyle = '#3a3a3a';
+      for(let k=-1;k<=1;k++){
+        ctx.beginPath(); ctx.arc(cx, bottomCY-bottomR*0.35+k*bottomR*0.32, 3, 0, Math.PI*2); ctx.fill();
+      }
+      // eyes
+      ctx.beginPath(); ctx.arc(cx-topR*0.32, topCY-topR*0.1, 2.6, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx+topR*0.32, topCY-topR*0.1, 2.6, 0, Math.PI*2); ctx.fill();
+      // nose
+      ctx.fillStyle = '#e88a2e';
+      ctx.beginPath();
+      ctx.moveTo(cx, topCY+topR*0.05);
+      ctx.lineTo(cx+topR*0.55, topCY+topR*0.2);
+      ctx.lineTo(cx, topCY+topR*0.28);
+      ctx.closePath();
+      ctx.fill();
+      // arms
+      ctx.strokeStyle = '#6b4a30';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(cx-bottomR*0.85, bottomCY); ctx.lineTo(cx-bottomR*1.5, bottomCY-14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+bottomR*0.85, bottomCY); ctx.lineTo(cx+bottomR*1.5, bottomCY-14); ctx.stroke();
+    }
+    else if(o.type === 'gate'){
+      const flutter = Math.sin(groundScroll*0.06 + x*0.02)*4;
+      const poleColor = o.variant ? '#e6483c' : '#3468c9';
+      ctx.fillStyle = '#dfe6ee';
+      ctx.fillRect(x+w*0.42, yTop, w*0.16, h);
+      ctx.fillStyle = poleColor;
+      for(let seg=0; seg<h; seg+=18){
+        ctx.fillRect(x+w*0.42, yTop+seg, w*0.16, 9);
+      }
+      ctx.fillStyle = poleColor;
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.58, yTop+h*0.08);
+      ctx.lineTo(x+w*1.05+flutter, yTop+h*0.16);
+      ctx.lineTo(x+w*0.58, yTop+h*0.30);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
   }
 
   // ---- main loop ----
@@ -504,12 +1127,15 @@
       speed = 320 + Math.min(distance/8, 260);
       distance += speed*dt/10;
       groundScroll += speed*dt;
+      bg1 += speed*dt*0.18;
+      bg2 += speed*dt*0.38;
+      player.runPhase += dt * (7 + speed/90);
 
       // spawn
       spawnTimer -= dt*1000;
       if(spawnTimer <= 0){
         spawnObstacle();
-        spawnTimer = randSpawnGap() * (1 - Math.min(distance/4000,0.4));
+        spawnTimer = randSpawnGap() * (1 - Math.min(distance/4500,0.35));
       }
 
       // move obstacles
@@ -534,6 +1160,15 @@
         triggerQuiz();
       }
     }
+    else if(state === 'quiz'){
+      const remain = Math.max(0, quizDeadline - now);
+      const pct = Math.max(0, Math.min(1, remain/QUIZ_MS));
+      quizTimerBar.style.width = (pct*100)+'%';
+      quizTimerNum.textContent = String(Math.ceil(remain/1000));
+      if(remain <= 0 && !quizAnswered){
+        handleQuizTimeout();
+      }
+    }
 
     draw();
 
@@ -542,8 +1177,16 @@
     }
   }
 
+  function draw(){
+    ctx.clearRect(0,0,BASE_W,BASE_H);
+    drawBackground();
+    drawGround();
+    obstacles.forEach(drawObstacle);
+    drawPlayer(player);
+  }
+
   // initial idle draw
-  player = { x:110, y:GROUND_Y, w:46, h:56, vy:0, onGround:true };
+  player = { x:120, y:GROUND_Y, w:PLAYER_W, h:PLAYER_H, vy:0, onGround:true, runPhase:0 };
   obstacles = [];
   draw();
 })();
